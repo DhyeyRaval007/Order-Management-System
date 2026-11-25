@@ -1,4 +1,4 @@
-# DADA Enterprise – B2B Dairy & Food Supply Chain Management System
+# Order Management System – B2B Dairy & Food Supply Chain Management System
 
 [![Live Demo](https://img.shields.io/badge/Live_Demo-Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://dada-enterprise-1.onrender.com)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/VATSAL-SOMALIYA/DADA-ENTERPRISE)
