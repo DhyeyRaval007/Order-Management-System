@@ -1,0 +1,73 @@
+/**
+ * @file app.js
+ * @description Entry point for the DADA Enterprise website backend application.
+ * Configures the Express server, global middleware, static asset routing, 
+ * database table verification, and mounts route controllers.
+ */
+
+require("dotenv").config();
+const express = require("express");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+
+// Import routing modules
+const authRoutes = require("./src/routes/authRoutes");
+const customerRoutes = require("./src/routes/customerRoutes");
+const dashboardRoutes = require("./src/routes/dashboardRoutes");
+const aiRoutes = require("./src/routes/aiRoutes");
+
+const pool = require("./src/config/db");
+
+// Verify and initialize database tables and seed defaults on startup.
+const initDb = require("./src/config/initDb");
+initDb().catch(err => console.error("❌ Error initializing database schema on startup:", err));
+
+const app = express();
+
+// --- VIEW ENGINE CONFIGURATION ---
+// Set EJS as the template engine and configure the directory for page views
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "src", "views"));
+
+// --- GLOBAL MIDDLEWARE ---
+// Serve static client-side resources (CSS, JS, images) from the public folder
+app.use(express.static(path.join(__dirname, "public")));
+
+// Parse json and urlencoded request bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true, parseArrays: false }));
+
+// Read cookies from client requests, facilitating secure JWT session management
+app.use(cookieParser());
+
+// --- ROUTE MOUNTING ---
+// Mount public authentication paths (login, logout, signup, OTPs) at root
+app.use("/", authRoutes);
+
+// Mount main application view routing (admin/customer portals, invoices, reports)
+app.use("/dashboard", dashboardRoutes);
+
+// Mount customer operations (adding branches, order placements, branch removals)
+app.use("/customer", customerRoutes);
+
+// Mount AI features (quantity scanning, voice ordering, morning briefing, RAG support)
+app.use("/api/ai", aiRoutes);
+
+
+
+// --- HEALTH CHECK FOR KEEP-ALIVE ---
+// Runs a lightweight query (SELECT 1) to ensure the Aiven database pool stays active.
+app.get("/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1");
+    res.status(200).send("OK");
+  } catch (err) {
+    console.error("Health check failed:", err);
+    res.status(500).send("Database connection error");
+  }
+});
+
+// --- START SERVER ---
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DADA Enterprise | Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+    
+    <style>
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+
+
+</head>
+<body class="bg-background text-foreground min-h-screen">
+
+    <!-- Responsive Sticky Navigation Header -->
+    <header class="bg-primary text-primary-fg px-4 sm:px-6 py-4 flex flex-wrap justify-between items-center gap-4 sticky top-0 z-50 shadow-md">
+        <div class="flex items-center gap-2 sm:gap-4">
+            <div class="w-8 h-8 bg-accent text-primary flex items-center justify-center font-bold rounded">D</div>
+            <h1 class="text-lg sm:text-xl font-serif-custom tracking-wider font-semibold">DADA ENTERPRISE</h1>
+            <span class="border border-accent/50 text-accent text-[10px] sm:text-xs px-2 py-1 rounded-full ml-1 sm:ml-2">🛡️ Admin</span>
+        </div>
+        <div class="flex items-center gap-3 sm:gap-4">
+            <button class="opacity-80 hover:opacity-100 transition">🔔</button>
+            <div class="flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full cursor-pointer">
+                <div class="w-6 h-6 bg-accent text-primary rounded-full flex items-center justify-center text-xs font-bold">A</div>
+                <span class="text-xs sm:text-sm font-medium"><%= user.user_name %></span>
+            </div>
+            <a href="/logout" class="text-xs sm:text-sm font-medium hover:text-accent transition ml-2 sm:ml-4 border-l border-white/30 pl-2 sm:pl-4">🚪 Logout</a>
+        </div>
+    </header>
+
+    <!-- Wrap Stats Indicators on Tablet Screens -->
+    <div class="bg-card border-b border-border px-4 sm:px-8 py-4 flex flex-wrap gap-6 sm:gap-12 overflow-x-auto">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-muted rounded"><span class="text-xl">👥</span></div>
+            <div>
+                <p class="text-xl font-bold leading-none"><%= stats.customers %></p>
+                <p class="text-xs text-muted-fg mt-1">Total Customers</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-muted rounded"><span class="text-xl">🏢</span></div>
+            <div>
+                <p class="text-xl font-bold leading-none"><%= stats.branches %></p>
+                <p class="text-xs text-muted-fg mt-1">Active Branches</p>
+            </div>
+        </div>
+    </div>
+
+    <main class="p-4 sm:p-8 max-w-7xl mx-auto w-full">
+        
+        <!-- Scrollable Tabs group on Mobile -->
+        <div class="flex gap-2 border-b border-border mb-6 overflow-x-auto whitespace-nowrap pb-1">
+            <button onclick="switchTab('orders')" id="btn-orders" class="px-4 py-2 border-b-2 border-primary font-medium text-primary bg-white rounded-t-md transition">📦 Demand Data</button>
+            <button onclick="switchTab('manage')" id="btn-manage" class="px-4 py-2 border-b-2 border-transparent text-muted-fg hover:text-foreground transition">✏️ Manage Orders</button>
+            <button onclick="switchTab('gst')" id="btn-gst" class="px-4 py-2 border-b-2 border-transparent text-muted-fg hover:text-foreground transition">📄 GST Invoice</button>
+            <button onclick="switchTab('reports')" id="btn-reports" class="px-4 py-2 border-b-2 border-transparent text-muted-fg hover:text-foreground transition">📊 Reports</button>
+        </div>
+
+        <div id="tab-orders" class="space-y-6">
+            <!-- AI Morning Dispatch Briefing Card -->
+            <div class="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xl p-2 bg-amber-500/20 rounded-xl">🌅</span>
+                        <div>
+                            <h3 class="font-bold text-sm text-foreground">AI Morning Dispatch Briefing</h3>
+                            <p class="text-[11px] text-muted-fg">Automated demand insights &amp; dispatch highlights for today</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="loadMorningBriefing(true)" id="btn-refresh-briefing" class="text-xs bg-card border border-border hover:border-primary text-muted-fg hover:text-foreground font-semibold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                        <span id="briefing-refresh-icon">🔄</span> Refresh
+                    </button>
+                </div>
+                <div id="briefing-content" class="text-xs sm:text-sm text-foreground space-y-2 leading-relaxed bg-white/70 p-4 rounded-xl border border-border/60">
+                    <div class="animate-pulse text-muted-fg">Analyzing today's branch demands and dispatch totals...</div>
+                </div>
+            </div>
+
+            <% if (Object.keys(groupedData).length === 0) { %>
+                <div class="p-8 text-center bg-card rounded-lg border border-border text-muted-fg">No active requirements found for today.</div>
+            <% } else { %>
+                <div class="bg-blue-50/50 border border-blue-100 text-blue-800 text-sm px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
+                    <span>ℹ️</span> <strong>Note:</strong> All quantities below are displayed in their standard product units (e.g. KG, 500mL, etc.).
+                </div>
+                <% for (const [customerName, branches] of Object.entries(groupedData)) { %>
+                    <div class="bg-card rounded-lg border border-border overflow-hidden shadow-sm">
+                        <div class="bg-muted/30 px-6 py-4 border-b border-border">
+                            <h2 class="text-lg font-bold text-primary flex items-center gap-2">🏢 <%= customerName %></h2>
+                        </div>
+                        <div class="p-4 sm:p-6 space-y-6">
+                            <% for (const [branchName, products] of Object.entries(branches)) { %>
+                                <div class="pl-4 border-l-2 border-accent">
+                                    <h3 class="font-semibold mb-3 flex items-center gap-2 text-sm text-muted-fg">📍 <%= branchName %></h3>
+                                    <!-- Responsive columns: 1 column on mobile, 2 columns on tablet, 4 on desktop -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <% products.forEach(item => { %>
+                                            <div class="bg-background border border-border p-3 rounded flex justify-between items-center">
+                                                <span class="font-medium text-sm"><%= item.product %></span>
+                                                <span class="text-sm font-bold bg-muted px-3 py-1 rounded shadow-sm"><%= item.qty %></span>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                <% } %>
+            <% } %>
+        </div>
+
+        <!-- Horizontal scrollbar support on Manage Orders table -->
+        <div id="tab-manage" class="hidden space-y-6">
+            <div class="bg-card rounded-xl border border-border overflow-x-auto shadow-sm">
+                <table class="w-full text-left text-sm min-w-[700px] md:min-w-0">
+                    <thead class="bg-primary text-primary-fg">
+                        <tr>
+                            <th class="p-4 font-medium tracking-wider">Order ID</th>
+                            <th class="p-4 font-medium tracking-wider">Branch/Client</th>
+                            <th class="p-4 font-medium tracking-wider">Date</th>
+                            <th class="p-4 font-medium tracking-wider">Status</th>
+                            <th class="p-4 font-medium tracking-wider text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border">
+                        <% if (typeof orders !== 'undefined' && orders && orders.length > 0) { %>
+                            <% orders.forEach(order => { %>
+                                <tr class="hover:bg-muted/20 transition">
+                                    <td class="p-4 font-mono font-bold">ORD-<%= String(order.id).padStart(4, '0') %></td>
+                                    <td class="p-4"><span class="font-bold text-primary"><%= order.company_name %></span><br><span class="text-xs text-muted-fg"><%= order.branch_names %></span></td>
+                                    <td class="p-4"><%= new Date(order.created_at).toLocaleDateString() %></td>
+                                    <td class="p-4">
+                                        <% if (order.status === 'Fulfilled') { %>
+                                            <span class="px-3 py-1 bg-green-100 text-green-800 border border-green-200 rounded-full text-xs font-bold">✔ Fulfilled</span>
+                                        <% } else { %>
+                                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full text-xs font-bold"><%= order.status %></span>
+                                        <% } %>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <% if (order.status === 'Fulfilled') { %>
+                                            <button onclick="openFulfillModal('<%= order.id %>')" class="text-primary hover:text-accent font-medium text-sm border border-primary/20 hover:border-accent bg-primary/5 px-3 py-1.5 rounded transition">
+                                                ✏️ Edit
+                                            </button>
+                                        <% } else { %>
+                                            <button onclick="openFulfillModal('<%= order.id %>')" class="text-primary hover:text-accent font-medium text-sm border border-primary/20 hover:border-accent bg-primary/5 px-3 py-1.5 rounded transition">
+                                                ✏️ Respond
+                                            </button>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="5" class="p-8 text-center text-muted-fg border border-dashed m-4 rounded">No orders found.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- GST Invoice Input Grid responsiveness (collapses to 1 column on mobile) -->
+        <div id="tab-gst" class="hidden">
+            <div class="bg-card rounded-xl border border-border p-6 sm:p-8 max-w-2xl mx-auto shadow-sm">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-muted rounded-lg text-xl">📄</div>
+                    <div>
+                        <h2 class="text-xl font-bold">Generate GST Invoice</h2>
+                        <p class="text-sm text-muted-fg">Select a date range to generate a GST-compliant invoice</p>
+                    </div>
+                </div>
+                <form action="/dashboard/reports/gst" method="GET" target="_blank" class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Select Customer</label>
+                            <select name="customerId" id="gst-customer-select" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                                <option value="" disabled selected>Choose a customer...</option>
+                                <% if (typeof customers !== 'undefined') { %>
+                                    <% customers.forEach(customer => { %>
+                                        <option value="<%= customer.id %>" data-gstin="<%= customer.gstin || '' %>"><%= customer.company_name %></option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Customer GSTIN</label>
+                            <input type="text" name="customerGstin" id="customer-gstin-input" placeholder="Enter Customer GSTIN" class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Seller GSTIN</label>
+                            <input type="text" name="sellerGstin" value="24CGJPS5378A1Z9    " required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Invoice No</label>
+                            <input type="text" name="invoiceNo" required placeholder="e.g. 127" class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">From Date</label>
+                            <input type="date" name="startDate" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">To Date</label>
+                            <input type="date" name="endDate" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Invoice Date</label>
+                            <input type="date" name="invoiceDate" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary text-foreground">
+                        </div>
+                    </div>
+                    <div class="bg-muted/50 border border-border p-4 rounded-lg text-sm text-muted-fg space-y-2">
+                        <p class="font-semibold text-foreground mb-3">Invoice will include:</p>
+                        <p>• Product-wise itemization with HSN codes</p>
+                        <p>• GST @ 5% on all dairy & soy products (split into CGST/SGST or IGST)</p>
+                        <p>• Consolidated quantities across all branches (units converted to L/KG)</p>
+                    </div>
+                    <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-primary-fg font-medium py-3 rounded transition flex justify-center items-center gap-2">
+                        📄 Preview GST Invoice
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Reports Grid responsiveness (collapses to 1 column on mobile) -->
+        <div id="tab-reports" class="hidden">
+            <div class="bg-card rounded-xl border border-border p-6 sm:p-8 max-w-2xl mx-auto shadow-sm">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="p-3 bg-muted rounded-lg text-xl">📊</div>
+                    <div>
+                        <h2 class="text-xl font-bold">Generate Overall Report</h2>
+                        <p class="text-sm text-muted-fg">Dispatch breakdown by product and customer for a date range</p>
+                    </div>
+                </div>
+                
+                <form action="/dashboard/reports/generate" method="GET" target="_blank" class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">From Date</label>
+                            <input type="date" name="startDate" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">To Date</label>
+                            <input type="date" name="endDate" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                        <!-- ADMIN ONLY: Select Customer -->
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Select Customer</label>
+                            <select name="customerId" class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary">
+                                <option value="">All Customers</option>
+                                <% if (typeof customers !== 'undefined') { %>
+                                    <% customers.forEach(customer => { %>
+                                        <option value="<%= customer.id %>"><%= customer.company_name %></option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2 uppercase text-muted-fg text-xs tracking-wider">Report Type</label>
+                            <select name="reportType" required class="w-full bg-background border border-border rounded p-3 outline-none focus:border-primary">
+                                <option value="tofu">Tofu (Hard Paneer)</option>
+                                <option value="dairy">Dairy Products</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-primary text-primary-fg font-bold py-3 rounded-lg hover:opacity-90 transition shadow-md flex justify-center items-center gap-2">
+                        ⬇ Download Report
+                    </button>
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Fulfill Modal table scrollable wrapper for small screen responsiveness -->
+    <div id="fulfillModal" class="fixed inset-0 bg-black/60 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 transition-all duration-300">
+        <div class="bg-card rounded-2xl max-w-3xl w-full shadow-[0_25px_60px_-15px_rgba(30,58,40,0.3)] overflow-hidden border border-[#c8a96e]/20 flex flex-col max-h-[90vh] transform scale-100 transition-all duration-300">
+            <div class="px-6 py-5 border-b border-border bg-gradient-to-r from-[#1e3a28]/5 via-[#1e3a28]/2 to-transparent flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold text-foreground font-serif-custom tracking-wide">Order Fulfillment</h3>
+                    <p id="fulfill-order-id" class="text-xs font-mono text-muted-fg mt-1"></p>
+                </div>
+                <button type="button" onclick="document.getElementById('fulfillModal').classList.add('hidden')" class="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 hover:bg-muted text-muted-fg hover:text-foreground transition-all duration-200 text-xl leading-none">&times;</button>
+            </div>
+            <form id="fulfill-form" method="POST" class="flex flex-col overflow-hidden">
+                <div class="p-6 sm:p-8 overflow-y-auto space-y-5">
+                    <div class="bg-[#fcfaf7] border border-border/80 p-4 rounded-xl shadow-sm text-sm text-[#6b6355] leading-relaxed flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            Adjust the actual delivered quantities below. If an item was not delivered, set it to 0.
+                            <span class="text-xs text-primary font-bold block mt-1">Note: All values represent standard product units.</span>
+                        </div>
+                        <!-- AI Delivery Slip Scanner -->
+                        <div>
+                            <input type="file" id="fulfill-slip-file" accept="image/*" class="hidden" onchange="processFulfillScan(this)">
+                            <button type="button" onclick="document.getElementById('fulfill-slip-file').click()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold text-xs px-3.5 py-2 rounded-xl shadow flex items-center gap-1.5 transition">
+                                <span id="fulfill-scan-icon">📸</span>
+                                <span id="fulfill-scan-text">AI Scan Slip</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="fulfill-scan-alert" class="hidden p-3 rounded-xl text-xs font-semibold"></div>
+                    <div class="overflow-x-auto border border-border/80 rounded-2xl shadow-sm bg-background">
+                        <table class="w-full text-left text-sm min-w-[500px] border-collapse">
+                            <thead>
+                                <tr class="bg-muted/50 border-b border-border/85">
+                                    <th class="py-3.5 px-4 font-bold text-xs uppercase tracking-wider text-muted-fg">Branch</th>
+                                    <th class="py-3.5 px-4 font-bold text-xs uppercase tracking-wider text-muted-fg">Product</th>
+                                    <th class="py-3.5 px-4 font-bold text-xs uppercase tracking-wider text-muted-fg text-center">Requested Qty</th>
+                                    <th class="py-3.5 px-4 font-bold text-xs uppercase tracking-wider text-muted-fg text-right w-48">Actual Delivered Qty</th>
+                                </tr>
+                            </thead>
+                            <tbody id="fulfill-items-tbody" class="divide-y divide-border/60"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="px-6 py-5 border-t border-border/80 bg-muted/20 flex justify-end gap-3">
+                    <button type="button" onclick="document.getElementById('fulfillModal').classList.add('hidden')" class="px-5 py-3 border border-border text-foreground font-semibold rounded-xl hover:bg-muted/40 transition-all duration-200">Cancel</button>
+                    <button type="submit" class="px-6 py-3 bg-primary text-primary-fg font-semibold rounded-xl hover:bg-primary/95 transition-all duration-200 shadow-md hover:shadow-lg">Mark as Delivered</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FLOATING RAG AI CHAT WIDGET (ADMIN) -->
+    <div id="floating-chat-container" class="fixed bottom-6 right-6 z-40">
+        <button type="button" onclick="toggleRagChat()" class="bg-gradient-to-r from-primary to-accent hover:shadow-xl text-white font-bold p-3.5 rounded-full shadow-lg flex items-center gap-2 transition-all transform hover:scale-105 active:scale-95">
+            <span class="text-xl">💬</span>
+            <span class="text-xs pr-1 font-semibold hidden sm:inline">Ask Dada AI</span>
+        </button>
+
+        <div id="ragChatWindow" class="hidden fixed bottom-20 right-6 w-[90vw] sm:w-96 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col z-50 max-h-[500px] h-[480px]">
+            <div class="p-4 bg-primary text-primary-fg flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <div>
+                        <h4 class="font-bold text-sm leading-tight">Dada AI Support</h4>
+                        <p class="text-[10px] opacity-80">Instant answers on rates, HSN &amp; rules</p>
+                    </div>
+                </div>
+                <button type="button" onclick="toggleRagChat()" class="text-primary-fg/80 hover:text-primary-fg text-xl leading-none">&times;</button>
+            </div>
+
+            <div id="rag-messages-box" class="flex-1 p-4 overflow-y-auto space-y-3 bg-[#fdfbf7] text-xs">
+                <div class="flex gap-2 items-start">
+                    <span class="p-1.5 bg-amber-500/10 rounded-lg text-sm">🤖</span>
+                    <div class="bg-white border border-border/80 p-3 rounded-2xl rounded-tl-none shadow-sm text-foreground max-w-[85%]">
+                        Hello Admin! Ask me anything about product rates, HSN codes, customer branches, or delivery guidelines.
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-3 py-2 bg-muted/30 border-t border-border/60 flex gap-1.5 overflow-x-auto no-scrollbar text-[11px]">
+                <button type="button" onclick="sendQuickQuestion('What is the base rate and GST of Sumul Dahi?')" class="bg-white border border-border px-2.5 py-1 rounded-full text-muted-fg hover:text-foreground hover:border-primary transition whitespace-nowrap">
+                    Dahi Rates
+                </button>
+                <button type="button" onclick="sendQuickQuestion('Which products have 0% GST?')" class="bg-white border border-border px-2.5 py-1 rounded-full text-muted-fg hover:text-foreground hover:border-primary transition whitespace-nowrap">
+                    0% GST Items
+                </button>
+                <button type="button" onclick="sendQuickQuestion('List all customer delivery branches')" class="bg-white border border-border px-2.5 py-1 rounded-full text-muted-fg hover:text-foreground hover:border-primary transition whitespace-nowrap">
+                    Branches
+                </button>
+            </div>
+
+            <form id="rag-chat-form" onsubmit="handleRagSubmit(event)" class="p-3 border-t border-border bg-card flex gap-2">
+                <input type="text" id="rag-chat-input" placeholder="Ask a question..." autocomplete="off" class="flex-1 bg-input border border-border rounded-xl px-3 py-2 text-xs outline-none focus:border-primary text-foreground">
+                <button type="submit" class="bg-primary hover:bg-primary/90 text-primary-fg px-3.5 py-2 rounded-xl text-xs font-bold transition shadow">
+                    Send
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabId) {
+            document.getElementById('tab-orders').classList.add('hidden');
+            document.getElementById('tab-manage').classList.add('hidden');
+            document.getElementById('tab-gst').classList.add('hidden');
+            document.getElementById('tab-reports').classList.add('hidden');
+            
+            ['orders', 'manage', 'gst', 'reports'].forEach(id => {
+                const btn = document.getElementById('btn-' + id);
+                btn.classList.remove('border-primary', 'text-primary', 'bg-white');
+                btn.classList.add('border-transparent', 'text-muted-fg');
+            });
+
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.remove('border-transparent', 'text-muted-fg');
+            activeBtn.classList.add('border-primary', 'text-primary', 'bg-white');
+        }
+
+        async function openFulfillModal(orderId) {
+            try {
+                const response = await fetch(`/customer/order/${orderId}`);
+                if (!response.ok) throw new Error("Failed to fetch order details");
+                
+                const data = await response.json();
+                const order = data.order;
+                const items = data.items;
+
+                document.getElementById('fulfill-form').action = `/dashboard/fulfill/${order.id}`;
+                document.getElementById('fulfill-order-id').innerText = `ORD-${String(order.id).padStart(4, '0')} • ${new Date(order.created_at).toLocaleDateString()}`;
+
+                const tbody = document.getElementById('fulfill-items-tbody');
+                tbody.innerHTML = ''; 
+
+                items.forEach(item => {
+                    const defaultVal = (item.delivered_quantity !== null && item.delivered_quantity !== undefined) 
+                        ? item.delivered_quantity 
+                        : item.ordered_quantity;
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-muted/20 even:bg-[#fcfaf7]/50 transition border-b border-border/40";
+                    tr.innerHTML = `
+                        <td class="py-4 px-4 font-bold text-xs text-primary tracking-wide">${item.branch_name}</td>
+                        <td class="py-4 px-4 font-medium text-foreground">${item.product_name} <span class="text-xs text-muted-fg ml-1">(${item.unit})</span></td>
+                        <td class="py-4 px-4 text-center font-bold font-mono text-foreground">${item.ordered_quantity}</td>
+                        <td class="py-3 px-4 text-right">
+                            <input 
+                                type="text" inputmode="decimal"
+                                name="delivered_quantities[${item.branch_id}_${item.product_id}]" 
+                                value="${defaultVal}"
+                                class="w-32 bg-[#fcfaf7] border border-border/80 focus:border-[#c8a96e] focus:ring-1 focus:ring-[#c8a96e] rounded-xl px-3 py-2 outline-none transition font-mono text-center text-sm font-semibold text-foreground placeholder:text-muted-fg/40 shadow-sm inline-block"
+                                required
+                                oninput="this.value = this.value.replace(/[^0-9.]/g, '')"
+                                autocomplete="off"
+                            >
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('fulfillModal').classList.remove('hidden');
+            } catch (error) {
+                console.error("Error:", error);
+                alert("Could not load order details.");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const customerSelect = document.getElementById('gst-customer-select');
+            if (customerSelect) {
+                customerSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const gstin = selectedOption.getAttribute('data-gstin') || '';
+                    const gstinInput = document.getElementById('customer-gstin-input');
+                    if (gstinInput) {
+                        gstinInput.value = gstin;
+                    }
+                });
+            }
+
+            // Automatically load morning dispatch briefing
+            loadMorningBriefing();
+        });
+
+        // --- AI MORNING BRIEFING LOGIC ---
+        async function loadMorningBriefing(forceRefresh = false) {
+            const contentBox = document.getElementById('briefing-content');
+            const icon = document.getElementById('briefing-refresh-icon');
+
+            if (forceRefresh) {
+                icon.classList.add('animate-spin');
+                contentBox.innerHTML = '<div class="animate-pulse text-muted-fg">Refreshing morning operations analysis...</div>';
+            }
+
+            try {
+                const response = await fetch('/api/ai/morning-briefing');
+                const data = await response.json();
+
+                if (response.ok && data.success && data.briefing) {
+                    // Format markdown bullet points to clean HTML
+                    const lines = data.briefing.split('\n').filter(l => l.trim().length > 0);
+                    let html = '<ul class="space-y-1.5">';
+                    lines.forEach(line => {
+                        const cleanLine = line.replace(/^[\*\-•]\s*/, '');
+                        html += `<li class="flex items-start gap-2"><span class="text-amber-500 font-bold">•</span><span>${cleanLine}</span></li>`;
+                    });
+                    html += '</ul>';
+                    contentBox.innerHTML = html;
+                } else {
+                    contentBox.innerHTML = '<p class="text-muted-fg">No briefing updates available at this moment.</p>';
+                }
+            } catch (err) {
+                console.error("Briefing error:", err);
+                contentBox.innerHTML = '<p class="text-xs text-muted-fg">Could not load AI briefing. Click Refresh to retry.</p>';
+            } finally {
+                icon.classList.remove('animate-spin');
+            }
+        }
+
+        // --- AI FULFILLMENT SLIP SCANNER ---
+        async function processFulfillScan(fileInput) {
+            if (!fileInput.files || !fileInput.files[0]) return;
+
+            const file = fileInput.files[0];
+            const alertBox = document.getElementById('fulfill-scan-alert');
+            const scanText = document.getElementById('fulfill-scan-text');
+            const scanIcon = document.getElementById('fulfill-scan-icon');
+
+            alertBox.classList.remove('hidden');
+            alertBox.className = "p-3 rounded-xl text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200";
+            alertBox.innerText = "Scanning delivery slip with AI...";
+
+            scanText.innerText = "Scanning...";
+            scanIcon.innerText = "⏳";
+
+            // Extract orderId from fulfill-form action URL (/dashboard/fulfill/:id)
+            const formAction = document.getElementById('fulfill-form').action;
+            const parts = formAction.split('/');
+            const orderId = parts[parts.length - 1];
+
+            const formData = new FormData();
+            formData.append('order_id', orderId);
+            formData.append('slip_file', file);
+
+            try {
+                const response = await fetch('/api/ai/scan-fulfillment', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.error || "Failed to scan delivery slip.");
+                }
+
+                if (!data.items || data.items.length === 0) {
+                    alertBox.className = "p-3 rounded-xl text-xs font-semibold bg-yellow-50 text-yellow-800 border border-yellow-200";
+                    alertBox.innerText = "AI could not detect quantities in the uploaded image. Please check manually.";
+                    return;
+                }
+
+                let matchCount = 0;
+                data.items.forEach(item => {
+                    const input = document.querySelector(`input[name="delivered_quantities[${item.branch_id}_${item.product_id}]"]`);
+                    if (input) {
+                        input.value = item.quantity;
+                        input.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-50');
+                        setTimeout(() => {
+                            input.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50');
+                        }, 4000);
+                        matchCount++;
+                    }
+                });
+
+                alertBox.className = "p-3 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
+                alertBox.innerText = `✨ Auto-filled ${matchCount} delivered item(s) from slip photo. Review quantities below before submitting.`;
+
+            } catch (err) {
+                console.error("Scan fulfillment error:", err);
+                alertBox.className = "p-3 rounded-xl text-xs font-semibold bg-red-50 text-red-700 border border-red-200";
+                alertBox.innerText = "Error scanning slip: " + err.message;
+            } finally {
+                scanText.innerText = "AI Scan Slip";
+                scanIcon.innerText = "📸";
+                fileInput.value = "";
+            }
+        }
+
+        // --- RAG CHAT LOGIC (ADMIN) ---
+        const ragChatHistory = [];
+
+        function toggleRagChat() {
+            const chatWindow = document.getElementById('ragChatWindow');
+            chatWindow.classList.toggle('hidden');
+            if (!chatWindow.classList.contains('hidden')) {
+                document.getElementById('rag-chat-input').focus();
+            }
+        }
+
+        function sendQuickQuestion(questionText) {
+            document.getElementById('rag-chat-input').value = questionText;
+            document.getElementById('rag-chat-form').dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+
+        async function handleRagSubmit(e) {
+            e.preventDefault();
+            const input = document.getElementById('rag-chat-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const messagesBox = document.getElementById('rag-messages-box');
+
+            const userBubble = document.createElement('div');
+            userBubble.className = "flex gap-2 items-start justify-end";
+            userBubble.innerHTML = `<div class="bg-primary text-primary-fg p-3 rounded-2xl rounded-tr-none shadow-sm max-w-[85%]">${message}</div>`;
+            messagesBox.appendChild(userBubble);
+            input.value = '';
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+
+            const typingBubble = document.createElement('div');
+            typingBubble.id = 'rag-typing-bubble';
+            typingBubble.className = "flex gap-2 items-start";
+            typingBubble.innerHTML = `
+                <span class="p-1.5 bg-amber-500/10 rounded-lg text-sm">🤖</span>
+                <div class="bg-white border border-border p-3 rounded-2xl rounded-tl-none text-muted-fg animate-pulse">Thinking...</div>
+            `;
+            messagesBox.appendChild(typingBubble);
+            messagesBox.scrollTop = messagesBox.scrollHeight;
+
+            try {
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, history: ragChatHistory })
+                });
+
+                const data = await response.json();
+                const typingEl = document.getElementById('rag-typing-bubble');
+                if (typingEl) typingEl.remove();
+
+                const botReply = data.reply || "Sorry, I could not process your query.";
+
+                const botBubble = document.createElement('div');
+                botBubble.className = "flex gap-2 items-start";
+                botBubble.innerHTML = `
+                    <span class="p-1.5 bg-amber-500/10 rounded-lg text-sm">🤖</span>
+                    <div class="bg-white border border-border/80 p-3 rounded-2xl rounded-tl-none shadow-sm text-foreground max-w-[85%] leading-relaxed">
+                        ${botReply.replace(/\n/g, '<br>')}
+                    </div>
+                `;
+                messagesBox.appendChild(botBubble);
+                messagesBox.scrollTop = messagesBox.scrollHeight;
+
+                ragChatHistory.push({ role: 'user', content: message });
+                ragChatHistory.push({ role: 'model', content: botReply });
+
+            } catch (err) {
+                console.error("Chat error:", err);
+                const typingEl = document.getElementById('rag-typing-bubble');
+                if (typingEl) typingEl.remove();
+            }
+        }
+    </script>
+</body>
+</html>
