@@ -297,13 +297,5 @@ Extracted Structured Database IDs:
 
 ---
 
-
-## 👤 Author & Links
-
-- **Author:** Vatsal Somaliya
-- **Live Demo:** [https://dada-enterprise-1.onrender.com](https://dada-enterprise-1.onrender.com)
-- **GitHub Repository:** [https://github.com/VATSAL-SOMALIYA/DADA-ENTERPRISE](https://github.com/VATSAL-SOMALIYA/DADA-ENTERPRISE)
-- **LinkedIn:** [linkedin.com/in/vatsal-somaliya-823a16343/](https://www.linkedin.com/in/vatsal-somaliya-823a16343/)
-
 ---
 *Developed as an industrial software engineering solution for DADA Enterprise B2B Supply Chain Operations.*
